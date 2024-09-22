@@ -1,0 +1,93 @@
+services:
+  # DNS Server using BIND
+  bind:
+    image: internetsystemsconsortium/bind9:9.21
+    platform: linux/amd64
+    container_name: bind_dns
+    volumes:
+      - ./bind/named.conf:/etc/bind/named.conf
+      - ./bind/db.example.com:/etc/bind/db.example.com
+    ports:
+      - "1053:53/udp"
+      - "1053:53/tcp"
+    networks:
+      - cdn_network
+    restart: always
+
+  # Load Balancer 1: NGINX Round Robin Load Balancer
+  lb1:
+    image: nginx:latest
+    container_name: load_balancer1
+    volumes:
+      - ./nginx/lb1/nginx.conf:/etc/nginx/nginx.conf
+      - ./cache/lb1:/var/cache/nginx
+    ports:
+      - "8080:80"
+    networks:
+      - cdn_network
+    depends_on:
+      - node1
+      - node2
+      - node3
+      - node4
+    command: /bin/sh -c "chmod -R 755 /var/cache/nginx && nginx -g 'daemon off;'"
+
+
+  # Load Balancer 2: NGINX Least Connections Load Balancer
+  lb2:
+    image: nginx:latest
+    container_name: load_balancer2
+    volumes:
+      - ./nginx/lb2/nginx.conf:/etc/nginx/nginx.conf
+      - ./cache/lb2:/var/cache/nginx
+    ports:
+      - "8081:80"
+    networks:
+      - cdn_network
+    depends_on:
+      - node1
+      - node2
+      - node3
+      - node4
+    command: /bin/sh -c "chmod -R 755 /var/cache/nginx && nginx -g 'daemon off;'"
+
+
+  # Node1: Simple HTTP server to serve images
+  node1:
+    image: httpd:latest
+    container_name: node1
+    volumes:
+      - ./images:/usr/local/apache2/htdocs
+    networks:
+      - cdn_network
+
+  # Node2: Simple HTTP server to serve images
+  node2:
+    image: httpd:latest
+    container_name: node2
+    volumes:
+      - ./images:/usr/local/apache2/htdocs
+    networks:
+      - cdn_network
+
+  # Node3: Simple HTTP server to serve images
+  node3:
+    image: httpd:latest
+    container_name: node3
+    volumes:
+      - ./images:/usr/local/apache2/htdocs
+    networks:
+      - cdn_network
+
+  # Node4: Simple HTTP server to serve images
+  node4:
+    image: httpd:latest
+    container_name: node4
+    volumes:
+      - ./images:/usr/local/apache2/htdocs
+    networks:
+      - cdn_network
+
+networks:
+  cdn_network:
+    driver: bridge
